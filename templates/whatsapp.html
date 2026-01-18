@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>WhatsApp Scam Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937, #020617);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #f9fafb;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.97);
+      padding: 22px 24px 20px;
+      border-radius: 18px;
+      box-shadow:
+        0 24px 55px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(55, 65, 81, 0.9);
+      max-width: 720px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.28), transparent 65%),
+        radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.25), transparent 65%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .inner { position: relative; z-index: 1; }
+
+    a.back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+      text-decoration: none;
+      color: #93c5fd;
+      font-size: 0.82rem;
+    }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .title-block h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .title-block p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      color: #cbd5f5;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(30, 64, 175, 0.9);
+      color: #bfdbfe;
+      border: 1px solid rgba(129, 140, 248, 0.85);
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 130px;
+      padding: 10px 11px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      font-size: 0.95rem;
+    }
+
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 11px;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .result {
+      margin-top: 14px;
+      padding: 10px;
+      border-radius: 10px;
+      font-weight: 600;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .not-scam {
+      background: rgba(22, 163, 74, 0.12);
+      color: #bbf7d0;
+      border: 1px solid #4ade80;
+    }
+
+    .scam {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fecaca;
+      border: 1px solid #f97373;
+    }
+
+    .error {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fecaca;
+      border: 1px solid #fca5a5;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="inner">
+      <a href="/" class="back-link">← Back to home</a>
+
+      <div class="top-row">
+        <div class="title-block">
+          <h1>WhatsApp Scam Detector</h1>
+          <p>Paste a WhatsApp-style message to check if it is a scam or safe.</p>
+        </div>
+        <span class="badge">Channel: WhatsApp 💬</span>
+      </div>
+
+      <textarea id="waMessage" placeholder="Example: Earn ₹5000 per day from home. Click link now."></textarea>
+      <button id="checkBtn">Analyse WhatsApp Message</button>
+
+      <div id="result" class="result"></div>
+      <p class="hint">Safe messages are shown as “Not a scam”. Scam messages show the scam type.</p>
+    </div>
+  </main>
+
+  <script>
+    const btn = document.getElementById("checkBtn");
+    const msgInput = document.getElementById("waMessage");
+    const resultDiv = document.getElementById("result");
+
+    btn.addEventListener("click", async () => {
+      const text = msgInput.value.trim();
+
+      if (!text) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "result error";
+        resultDiv.textContent = "Please enter a WhatsApp message.";
+        return;
+      }
+
+      try {
+        const response = await fetch("/predict_whatsapp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+
+        const data = await response.json();
+        const prediction = (data.prediction || "").toLowerCase();
+
+        resultDiv.style.display = "block";
+
+        if (prediction === "not a scam") {
+          resultDiv.className = "result not-scam";
+          resultDiv.textContent = "Result: Not a scam message ✅";
+        } else {
+          resultDiv.className = "result scam";
+          resultDiv.textContent = `Result: Scam message – Type: ${data.prediction} 🚫`;
+        }
+      } catch (err) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "result error";
+        resultDiv.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>

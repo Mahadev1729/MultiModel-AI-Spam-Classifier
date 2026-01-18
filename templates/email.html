@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Email Spam / Phishing Detector</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937, #020617);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #f9fafb;
+    }
+
+    .card {
+      background: rgba(15, 23, 42, 0.97);
+      padding: 22px 24px 20px;
+      border-radius: 18px;
+      box-shadow:
+        0 24px 55px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(55, 65, 81, 0.9);
+      max-width: 720px;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.28), transparent 65%),
+        radial-gradient(circle at bottom right, rgba(236, 72, 153, 0.25), transparent 65%);
+      opacity: 0.9;
+      pointer-events: none;
+    }
+
+    .inner { position: relative; z-index: 1; }
+
+    a.back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 8px;
+      text-decoration: none;
+      color: #93c5fd;
+      font-size: 0.82rem;
+    }
+
+    a.back-link:hover { text-decoration: underline; }
+
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .title-block h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+
+    .title-block p {
+      margin: 2px 0 0;
+      font-size: 0.8rem;
+      color: #cbd5f5;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: rgba(30, 64, 175, 0.9);
+      color: #bfdbfe;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border: 1px solid rgba(129, 140, 248, 0.85);
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin: 8px 0 4px;
+      font-size: 0.9rem;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid #374151;
+      font-size: 0.94rem;
+      box-sizing: border-box;
+      outline: none;
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #6b7280;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: #60a5fa;
+      box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.65);
+      background: rgba(15, 23, 42, 0.98);
+    }
+
+    textarea {
+      min-height: 150px;
+      resize: vertical;
+    }
+
+    .row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .row > div {
+      flex: 1;
+      min-width: 0;
+    }
+
+    button {
+      margin-top: 12px;
+      width: 100%;
+      padding: 11px;
+      font-size: 0.96rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.8);
+      transition: transform 0.12s, box-shadow 0.12s, opacity 0.12s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 36px rgba(37, 99, 235, 0.95);
+    }
+
+    button:active {
+      transform: translateY(0);
+      opacity: 0.96;
+      box-shadow: 0 12px 26px rgba(37, 99, 235, 0.85);
+    }
+
+    .result {
+      margin-top: 14px;
+      padding: 10px 11px;
+      border-radius: 10px;
+      font-weight: 600;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .ham {
+      background: rgba(22, 163, 74, 0.12);
+      color: #bbf7d0;
+      border: 1px solid #4ade80;
+    }
+
+    .spam {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fecaca;
+      border: 1px solid #f97373;
+    }
+
+    .error {
+      background: rgba(248, 113, 113, 0.12);
+      color: #fecaca;
+      border: 1px solid #fca5a5;
+    }
+
+    .hint {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #9ca3af;
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="inner">
+      <a href="/" class="back-link">← Back to home</a>
+
+      <div class="top-row">
+        <div class="title-block">
+          <h1>Email Spam / Phishing Detector</h1>
+          <p>Provide sender, subject, and body. We’ll analyse it for phishing risk.</p>
+        </div>
+        <span class="badge">Channel: Email ✉️</span>
+      </div>
+
+      <label for="sender">Sender email</label>
+      <input type="text" id="sender" placeholder="e.g. support@secure-bank.com" />
+
+      <div class="row">
+        <div>
+          <label for="subject">Subject</label>
+          <input type="text" id="subject" placeholder="e.g. Urgent: Account Verification Required" />
+        </div>
+      </div>
+
+      <label for="body">Email body</label>
+      <textarea id="body" placeholder="Paste the email body here..."></textarea>
+
+      <button id="checkBtn">Analyse Email</button>
+
+      <div id="result" class="result"></div>
+      <p class="hint">Tip: Phishing emails often create urgency, ask for OTPs, or request login details.</p>
+    </div>
+  </main>
+
+  <script>
+    const btn = document.getElementById("checkBtn");
+    const senderInput = document.getElementById("sender");
+    const subjectInput = document.getElementById("subject");
+    const bodyInput = document.getElementById("body");
+    const resultDiv = document.getElementById("result");
+
+    btn.addEventListener("click", async () => {
+      const sender = senderInput.value.trim();
+      const subject = subjectInput.value.trim();
+      const body = bodyInput.value.trim();
+
+      if (!sender || !subject || !body) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "result error";
+        resultDiv.textContent = "Please fill in sender, subject, and body.";
+        return;
+      }
+
+      const fullEmail = `From: ${sender}\nSubject: ${subject}\n${body}`;
+
+      try {
+        const response = await fetch("/predict_email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: fullEmail })
+        });
+
+        if (!response.ok) throw new Error("Server error: " + response.status);
+
+        const data = await response.json();
+        const prediction = (data.prediction || "").toUpperCase();
+
+        resultDiv.style.display = "block";
+
+        if (prediction === "SPAM") {
+          resultDiv.className = "result spam";
+          resultDiv.textContent = "Result: This email looks SPAM / PHISHING 🚫";
+        } else if (prediction === "HAM") {
+          resultDiv.className = "result ham";
+          resultDiv.textContent = "Result: This email looks LEGITIMATE ✅";
+        } else {
+          resultDiv.className = "result error";
+          resultDiv.textContent = "Unexpected server response.";
+        }
+      } catch (err) {
+        resultDiv.style.display = "block";
+        resultDiv.className = "result error";
+        resultDiv.textContent = "Error: " + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
